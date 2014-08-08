@@ -13,6 +13,7 @@ import java.awt.event.ItemListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -28,7 +29,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import annotation.KrzakiPattern.Attachment;
-import annotation.PatternTableModel;
+import annotation.AbstractPatternTableModel;
 
 @SuppressWarnings("serial")
 public class MainWindow extends JFrame implements ListSelectionListener,
@@ -38,31 +39,36 @@ public class MainWindow extends JFrame implements ListSelectionListener,
 	private final static int HEIGHT = 700;
 	protected final static Color SELECTED_COLOR = new Color(184, 207, 229);
 	protected final static Color UNSELECTED_COLOR = new Color(240, 240, 240);
+	protected final static Color HIGHLIGHTED_COLOR = new Color(140, 140, 140);
+
+	public final static String UNDECIDABLE_TEXT = "oba prawdopodobne";
+	public final static String INCORRECT_TEXT = "oba niepoprawne";
 
 	private Map<JCheckBox, Attachment> choices = new HashMap<JCheckBox, Attachment>();
 
 	private JCheckBox verbChoice = new JCheckBox("...");
 	private JCheckBox substChoice = new JCheckBox("...");
-	private JCheckBox undecidableChoice = new JCheckBox("oba prawdopodobne");
-	private JCheckBox incorrectChoice = new JCheckBox("oba niepoprawne");
-	private JTextArea sentenceArea = new JTextArea();
+	private JCheckBox undecidableChoice = new JCheckBox(UNDECIDABLE_TEXT);
+	private JCheckBox incorrectChoice = new JCheckBox(INCORRECT_TEXT);
+	protected JTextArea sentenceArea = new JTextArea();
 	private JTable sentenceTable = new JTable(0, 3);
 
-	private PatternTableModel model;
+	private AbstractPatternTableModel model;
 
 	private int currentIndex;
 	private Attachment selectedAttachment;
-	
+
 	private JFrame me = this;
 
 	public MainWindow() {
+
 		super("PP Attachment");
 
 		this.setLayout(new BorderLayout());
 
 		JPanel choicePanel = new JPanel();
 		choicePanel.setLayout(new GridLayout(4, 1));
-		this.add(choicePanel, BorderLayout.CENTER);
+		// this.add(choicePanel, BorderLayout.CENTER);
 
 		this.prepareChoiceBox(this.verbChoice, Attachment.VERB);
 		this.prepareChoiceBox(this.substChoice, Attachment.SUBST);
@@ -72,12 +78,12 @@ public class MainWindow extends JFrame implements ListSelectionListener,
 		choicePanel.add(this.substChoice);
 		choicePanel.add(this.undecidableChoice);
 		choicePanel.add(this.incorrectChoice);
-		//choicePanel.setPreferredSize(new Dimension(WIDTH, 200));
+		// choicePanel.setPreferredSize(new Dimension(WIDTH, 200));
 		this.add(choicePanel, BorderLayout.CENTER);
 
 		this.prepareSentenceArea();
-		//this.sentenceArea.setPreferredSize(new Dimension(WIDTH, 200));
 		this.add(this.sentenceArea, BorderLayout.NORTH);
+		// this.sentenceArea.setPreferredSize(new Dimension(WIDTH, 200));
 
 		this.sentenceTable.setRowSelectionAllowed(true);
 		this.sentenceTable.setColumnSelectionAllowed(false);
@@ -85,7 +91,7 @@ public class MainWindow extends JFrame implements ListSelectionListener,
 				.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		this.sentenceTable.getSelectionModel().addListSelectionListener(this);
 		JScrollPane scroll = new JScrollPane(this.sentenceTable);
-		//scroll.setPreferredSize(new Dimension(WIDTH, HEIGHT / 2));
+		// scroll.setPreferredSize(new Dimension(WIDTH, HEIGHT / 2));
 		this.add(scroll, BorderLayout.SOUTH);
 		this.pack();
 		this.setBounds(10, 10, WIDTH, HEIGHT);
@@ -113,26 +119,29 @@ public class MainWindow extends JFrame implements ListSelectionListener,
 		this.add(rightButtons, BorderLayout.EAST);
 
 		this.setResizable(false);
-		
+
 		this.addWindowListener(new java.awt.event.WindowAdapter() {
-		    @Override
-		    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-		    	model.saveData();
-		        JOptionPane.showMessageDialog(me, "Dane zapisano. Naciśnij OK, aby zakończyć");
-		        System.exit(0);
-		    }
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+				model.saveData();
+				JOptionPane.showMessageDialog(me,
+						"Dane zapisano. Naciśnij OK, aby zakończyć");
+				System.exit(0);
+			}
 		});
 
 	}
 
-	public void setPatternsModel(PatternTableModel model) {
+	public void setPatternsModel(AbstractPatternTableModel model) {
 		this.model = model;
 		this.sentenceTable.setModel(model);
 		this.sentenceTable.getColumnModel().getColumn(2)
 				.setPreferredWidth(WIDTH - 40);
 		this.sentenceTable.getColumnModel().getColumn(0).setHeaderValue("Nr");
-		this.sentenceTable.getColumnModel().getColumn(1).setHeaderValue("Gotowe?");
-		this.sentenceTable.getColumnModel().getColumn(2).setHeaderValue("Zdanie");
+		this.sentenceTable.getColumnModel().getColumn(1)
+				.setHeaderValue("Gotowe?");
+		this.sentenceTable.getColumnModel().getColumn(2)
+				.setHeaderValue("Zdanie");
 		this.setCurrentIndex(0);
 	}
 
@@ -165,21 +174,27 @@ public class MainWindow extends JFrame implements ListSelectionListener,
 		this.sentenceTable.scrollRectToVisible(new Rectangle(this.sentenceTable
 				.getCellRect(this.currentIndex, 0, true)));
 		this.selectSentence(this.currentIndex);
-		this.setTitle("Frazy przyimkowe (pozostało " + this.model.howManyUndecided() + " do zrobienia)");
+		this.setTitle("Frazy przyimkowe (pozostało "
+				+ this.model.howManyUndecided() + " do zrobienia)");
 	}
 
 	private void selectSentence(int index) {
 		this.setPhraseText(this.verbChoice, this.model.getVerbText(index));
 		this.setPhraseText(this.substChoice, this.model.getSubstText(index));
 		this.selectedAttachment = this.model.getAttachment(this.currentIndex);
-		this.setChoice(this.selectedAttachment);
+		this.setChoice(this.selectedAttachment,
+				this.model.highlightedAttachments(index));
 		this.sentenceArea.setText(this.model.getSentenceText(index));
 	}
 
-	private void setChoice(Attachment choice) {
+	private void setChoice(Attachment choice, Set<Attachment> highlighted) {
 		for (Entry<JCheckBox, Attachment> e : this.choices.entrySet()) {
-			this.setCheckBoxSelected(e.getKey(),
+			JCheckBox box = e.getKey();
+			this.setCheckBoxSelected(box,
 					e.getValue() == this.selectedAttachment);
+			if (highlighted.contains(e.getValue()) && !box.isSelected()) {
+				box.setBackground(HIGHLIGHTED_COLOR);
+			}
 		}
 	}
 
@@ -211,7 +226,6 @@ public class MainWindow extends JFrame implements ListSelectionListener,
 				}
 			}
 			setCurrentIndex(index);
-			;
 		}
 	}
 
@@ -225,7 +239,7 @@ public class MainWindow extends JFrame implements ListSelectionListener,
 		} else {
 			this.selectedAttachment = attachment;
 		}
-		this.setChoice(this.selectedAttachment);
+		this.setChoice(this.selectedAttachment, this.model.highlightedAttachments(currentIndex));
 		model.setAttachment(currentIndex, this.selectedAttachment);
 	}
 

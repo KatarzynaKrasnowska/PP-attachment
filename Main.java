@@ -1,5 +1,5 @@
-import annotation.PatternTableModel;
 import gui.MainWindow;
+import annotation.PatternTableModel;
 
 public class Main {
 

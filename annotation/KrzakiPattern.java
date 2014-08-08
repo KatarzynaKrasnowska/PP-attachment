@@ -29,11 +29,15 @@ public class KrzakiPattern {
 		
 	}
 	
-	private String verbPP;
-	private String substPP;
-	private String text;
-	private String id;
-	private Attachment attachment = null;
+	protected String verbPP;
+	protected String substPP;
+	protected String text;
+	protected String id;
+	protected Attachment attachment = null;
+	
+	public KrzakiPattern() {
+		super();
+	}
 
 	public KrzakiPattern(String dataline) {
 		super();
